@@ -11,6 +11,7 @@
   --ok:#3f7d5a; --warn:#b3412f; --cloth:#f4f1ec;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -48,6 +49,7 @@ button{cursor:pointer}
 .table .top3d{position:absolute;inset:0;background:radial-gradient(circle at 40% 35%,#fff,var(--cloth) 60%,#ddd6cc);box-shadow:0 10px 22px rgba(0,0,0,.35),inset 0 0 0 6px rgba(255,255,255,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2}
 .table.round .top3d{border-radius:50%}
 .table.rect .top3d{border-radius:10px}
+.table.square .top3d{border-radius:8px}
 .table .num{width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid #d8d0c6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
 .table.rect .num{width:auto;min-width:34px;padding:0 8px;border-radius:17px}
 .table .occ{font-size:11px;color:var(--muted);margin-top:2px;font-weight:600}
@@ -57,6 +59,13 @@ button{cursor:pointer}
 .table.hot .top3d{box-shadow:0 0 0 5px #e9c46a,0 10px 22px rgba(0,0,0,.35)}
 .table.full.hot .top3d{box-shadow:0 0 0 5px var(--warn),0 10px 22px rgba(0,0,0,.35)}
 .editing .table{cursor:grab}
+.editing .table:active{cursor:grabbing}
+.stage{cursor:grab}.stage.panning{cursor:grabbing}
+.zoom{position:absolute;right:12px;top:12px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:38px;height:38px;border-radius:10px;border:0;background:rgba(255,250,246,.92);font-size:18px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+.lockbar{position:absolute;left:12px;top:12px;z-index:6}
+.lockbar button{border:0;border-radius:12px;padding:9px 14px;font-weight:700;background:rgba(255,250,246,.92);box-shadow:0 3px 10px rgba(0,0,0,.3)}
+.lockbar button.open{background:#e9c46a}
 .editing .table .top3d{outline:2px dashed rgba(255,255,255,.8);outline-offset:4px}
 .tip{position:absolute;z-index:50;pointer-events:none;background:rgba(255,255,255,.95);border-radius:9px;padding:4px 10px;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.3);white-space:nowrap;transform:translate(-50%,-130%)}
 
@@ -84,13 +93,19 @@ button{cursor:pointer}
 .card .sub{font-size:12px;color:var(--muted);margin:2px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .pp{display:flex;gap:4px;flex-wrap:wrap}
 .card .p{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 2px 4px rgba(0,0,0,.18)}
-.card.seated{opacity:.62}
-.card .tag{position:absolute;top:-8px;right:8px;background:var(--ink);color:#fff;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:600}
+.card.seated{opacity:.7}
+.card.seated:hover{opacity:1}
+.card .tag{position:absolute;top:-10px;right:8px;background:var(--ink);color:#fff;font-size:11px;padding:2px 4px 2px 8px;border-radius:10px;font-weight:600;display:flex;align-items:center;gap:4px;border:0}
+.card .tag .x{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.25);display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1}
+.card .tag:hover .x{background:#fff;color:var(--ink)}
 .card .tag.bad{background:var(--warn)}
 .ghost{position:fixed;z-index:100;pointer-events:none;opacity:.92;transform:translate(-50%,-50%) rotate(-3deg);box-shadow:0 12px 28px rgba(0,0,0,.4)}
 
-.pal{flex:0 0 auto;width:104px;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:14px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;touch-action:none;cursor:grab;user-select:none;font-size:12px;font-weight:600}
-.pal svg{display:block}
+.pal{flex:0 0 auto;width:132px;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:14px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;touch-action:none;cursor:grab;user-select:none;font-size:12px;font-weight:600}
+.pal svg{display:block;height:64px;width:auto}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:#fff;font-weight:700;line-height:1;padding:0}
+.step b{min-width:22px;text-align:center;font-size:15px}
 .hint{font-size:12px;color:var(--muted);align-self:center;max-width:260px;padding:0 6px}
 
 /* ---------- diálogos ---------- */
@@ -142,7 +157,6 @@ dialog .btn.danger{color:var(--warn);border-color:#e7c3bb}
       <button data-t="cena">Cena</button>
     </div>
     <div class="grp">
-      <button class="btn" id="editBtn">✏️ Editar plano</button>
       <button class="btn" id="menuBtn" title="Exportar / importar">⋯</button>
     </div>
     <div class="stats" id="stats"></div>
@@ -151,6 +165,8 @@ dialog .btn.danger{color:var(--warn);border-color:#e7c3bb}
   <div class="stage" id="stage">
     <div class="floor"></div>
     <div class="plan" id="plan"></div>
+    <div class="lockbar"><button id="lockBtn"></button></div>
+    <div class="zoom"><button id="zIn" title="Acercar">+</button><button id="zOut" title="Alejar">−</button><button id="zFit" title="Encajar el comedor" style="font-size:15px">⤢</button></div>
   </div>
 
   <section class="panel">
@@ -199,7 +215,7 @@ dialog .btn.danger{color:var(--warn);border-color:#e7c3bb}
     <div class="f" id="tblEdit">
       <label>Nombre / número<input name="name" required></label>
       <label>Sillas<input name="seats" type="number" min="1" max="24" required></label>
-      <label class="w">Forma<select name="shape"><option value="round">Redonda</option><option value="rect">Rectangular</option></select></label>
+      <label class="w">Forma<select name="shape"><option value="round">Redonda</option><option value="square">Cuadrada</option><option value="rect">Rectangular</option></select></label>
     </div>
     <div class="acts">
       <button type="button" class="btn danger" id="delTbl">Eliminar mesa</button>
@@ -240,7 +256,7 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const iso = d => { const z = new Date(d.getTime() - d.getTimezoneOffset()*6e4); return z.toISOString().slice(0,10); };
 
 /* ---------- estado ---------- */
-let S, view = { date: iso(new Date()), turno: new Date().getHours() >= 17 ? 'cena' : 'comida', tab: 'res', edit: false, q: '', onlyFree: false };
+let S, view = { date: iso(new Date()), turno: new Date().getHours() >= 17 ? 'cena' : 'comida', tab: 'res', edit: false, zoom: 1, px: 0, py: 0, pal: { round: 8, square: 4, rect: 6 }, q: '', onlyFree: false };
 
 function demo() {
   const t = [];
@@ -249,7 +265,7 @@ function demo() {
   row(600, [7, 8, 9], 8);
   t.filter(x => ['7','8','9'].includes(x.name)).forEach((x, i) => x.x = 260 + i * 260);
   t.push({ id: uid(), name: '10', shape: 'rect', seats: 6, x: 1040, y: 640 });
-  t.push({ id: uid(), name: '11', shape: 'rect', seats: 4, x: 80, y: 640 });
+  t.push({ id: uid(), name: '11', shape: 'square', seats: 4, x: 90, y: 640 });
   const names = [['Familia Ruiz',4,'13:30','Carolina, Franco, Mateo, Inés'],['Familia Maldonado',4,'14:00','Ignacio, Joaquín, Silvia, Tomás'],
     ['Familia Luna',5,'14:00','Alberto, Diego, Eduardo, Martín, Victoria'],['Familia Godoy',4,'14:15','Andrés, Camila, Gustavo, Joaquín'],
     ['Familia Peralta',4,'14:30','Andrés, Gonzalo, Roberto, Victoria'],['Cumple Hernán',9,'14:30',''],['Mesa empresa Acme',8,'13:45',''],
@@ -279,8 +295,8 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 let scale = 1;
 function fit() {
   const w = stage.clientWidth, h = stage.clientHeight;
-  scale = Math.min(w / 1200, h / 760);
-  const ox = (w - 1200 * scale) / 2, oy = Math.max(0, (h - 760 * scale) / 2);
+  scale = Math.min(w / 1200, h / 760) * view.zoom;
+  const ox = (w - 1200 * scale) / 2 + view.px, oy = (h - 760 * scale) / 2 + view.py;
   plan.style.transform = `translate(${ox}px,${oy}px) scale(${scale})`;
   plan.dataset.ox = ox; plan.dataset.oy = oy;
 }
@@ -293,6 +309,13 @@ function geom(t) {
     const d = Math.max(70, 40 + t.seats * 9), R = d / 2 + 16, chairs = [];
     for (let i = 0; i < t.seats; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / t.seats; chairs.push([d / 2 + R * Math.cos(a), d / 2 + R * Math.sin(a), a * 180 / Math.PI + 90]); }
     return { w: d, h: d, chairs };
+  }
+  if (t.shape === 'square') {
+    const n = t.seats, side = [0, 0, 0, 0]; for (let i = 0; i < n; i++) side[i % 4]++;
+    const w = Math.max(70, Math.max(...side) * 40 + 16), chairs = [];
+    const put = (k, f) => { for (let i = 0; i < side[k]; i++) chairs.push(f((i + .5) / side[k])); };
+    put(0, u => [u * w, -14, 0]); put(1, u => [w + 14, u * w, 90]); put(2, u => [w - u * w, w + 14, 180]); put(3, u => [-14, w - u * w, 270]);
+    return { w, h: w, chairs };
   }
   const per = Math.ceil(t.seats / 2), w = Math.max(64, per * 40 + 16), h = 64, chairs = [];
   const bottom = t.seats - per;
@@ -348,7 +371,7 @@ function renderList() {
     const el = document.createElement('div');
     el.className = 'card' + (t ? ' seated' : '');
     el.dataset.id = r.id;
-    el.innerHTML = `${t ? `<span class="tag${over ? ' bad' : ''}">Mesa ${esc(t.name)}</span>` : ''}
+    el.innerHTML = `${t ? `<button type="button" class="tag${over ? ' bad' : ''}" data-unseat="${r.id}" title="Quitar de la mesa">Mesa ${esc(t.name)} <span class="x">×</span></button>` : ''}
       <div class="h"><span class="sw" style="background:${r.color}"></span>${esc(r.name)} · ${r.pax}<span class="t">${esc(r.time || '')}</span></div>
       <div class="sub">${esc([r.phone, r.notes].filter(Boolean).join(' · ') || ' ')}</div>
       <div class="pp">${pp}</div>`;
@@ -357,17 +380,19 @@ function renderList() {
 }
 
 function renderPalette() {
-  const items = [['round', 4], ['round', 6], ['round', 8], ['round', 10], ['round', 12], ['rect', 2], ['rect', 4], ['rect', 6], ['rect', 8]];
-  for (const [shape, seats] of items) {
+  const labels = { round: 'Redonda', square: 'Cuadrada', rect: 'Rectangular' };
+  for (const shape of ['round', 'square', 'rect']) {
+    const seats = view.pal[shape];
     const el = document.createElement('div');
     el.className = 'pal'; el.dataset.shape = shape; el.dataset.seats = seats;
-    const g = geom({ shape, seats }), pad = 18, W = g.w + pad * 2, H = g.h + pad * 2, k = 60 / Math.max(W, H);
-    const chairs = g.chairs.map(([x, y]) => `<rect x="${x + pad - 7}" y="${y + pad - 7}" width="14" height="14" rx="4" fill="#e9e2d9" stroke="#bfb3a6"/>`).join('');
+    const g = geom({ shape, seats }), pad = 18, W = g.w + pad * 2, H = g.h + pad * 2;
+    const chairs = g.chairs.map(([x, y]) => `<rect x="${x + pad - 8}" y="${y + pad - 8}" width="16" height="16" rx="4" fill="#e9e2d9" stroke="#bfb3a6"/>`).join('');
     const top = shape === 'round' ? `<circle cx="${g.w / 2 + pad}" cy="${g.h / 2 + pad}" r="${g.w / 2}" fill="#fff" stroke="#bfb3a6" stroke-width="2"/>` : `<rect x="${pad}" y="${pad}" width="${g.w}" height="${g.h}" rx="8" fill="#fff" stroke="#bfb3a6" stroke-width="2"/>`;
-    el.innerHTML = `<svg width="${W * k}" height="${H * k}" viewBox="0 0 ${W} ${H}">${chairs}${top}</svg>${shape === 'round' ? 'Redonda' : 'Rectangular'} · ${seats}`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${chairs}${top}</svg>${labels[shape]}
+      <div class="step"><button type="button" data-step="-1" data-shape="${shape}">−</button><b>${seats}</b><button type="button" data-step="1" data-shape="${shape}">+</button></div><span style="font-weight:500;color:var(--muted)">comensales</span>`;
     list.appendChild(el);
   }
-  list.insertAdjacentHTML('beforeend', `<div class="hint">Arrastra una mesa al plano. Con <b>Editar plano</b> activado puedes mover las mesas y, al pulsar una, cambiarle el nombre, las sillas o eliminarla.</div>`);
+  list.insertAdjacentHTML('beforeend', `<div class="hint">Elige cuántos comensales con <b>− / +</b> y arrastra la mesa al plano. Para mover o cambiar mesas, pulsa <b>🔒 Plano fijo</b> arriba a la izquierda y se desbloquea.</div>`);
 }
 
 function renderStats() {
@@ -380,7 +405,7 @@ function render() {
   $('#date').value = view.date;
   document.querySelectorAll('#turnos button').forEach(b => b.classList.toggle('on', b.dataset.t === view.turno));
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === view.tab));
-  $('#editBtn').classList.toggle('on', view.edit);
+  const lb = $('#lockBtn'); lb.textContent = view.edit ? '🔓 Moviendo mesas · pulsa para fijar' : '🔒 Plano fijo'; lb.classList.toggle('open', view.edit);
   $('#q').parentElement.style.display = $('#onlyFree').parentElement.style.display = view.tab === 'res' ? '' : 'none';
   renderPlan(); renderList(); renderStats();
 }
@@ -399,7 +424,14 @@ function showTip(tEl, extra = 0) {
   tip.style.left = (r.left + r.width / 2 - sr.left) + 'px'; tip.style.top = (r.top - sr.top) + 'px';
 }
 
+list.addEventListener('click', e => {
+  const st = e.target.closest('[data-step]');
+  if (st) { const k = st.dataset.shape; view.pal[k] = Math.max(1, Math.min(24, view.pal[k] + +st.dataset.step)); renderList(); return; }
+  const un = e.target.closest('[data-unseat]');
+  if (un) { const r = S.reservations.find(x => x.id === un.dataset.unseat); r.tableId = null; save(); render(); toast(`${r.name} ya no tiene mesa`); }
+});
 list.addEventListener('pointerdown', e => {
+  if (e.target.closest('[data-step], [data-unseat]')) return;
   const card = e.target.closest('.card, .pal'); if (!card || e.button > 0) return;
   drag = { kind: card.classList.contains('pal') ? 'pal' : 'res', src: card, sx: e.clientX, sy: e.clientY, moved: false };
   card.setPointerCapture(e.pointerId);
@@ -407,11 +439,12 @@ list.addEventListener('pointerdown', e => {
 plan.addEventListener('pointerdown', e => {
   const tEl = e.target.closest('.table'); if (!tEl || e.button > 0) return;
   const t = S.tables.find(x => x.id === tEl.dataset.id), p = toPlan(e.clientX, e.clientY);
-  drag = { kind: 'table', src: tEl, t, dx: p.x - t.x, dy: p.y - t.y, sx: e.clientX, sy: e.clientY, moved: false };
+  drag = { kind: 'table', src: tEl, t, dx: p.x - t.x, dy: p.y - t.y, px: view.px, py: view.py, sx: e.clientX, sy: e.clientY, moved: false };
   tEl.setPointerCapture(e.pointerId);
 });
 addEventListener('pointermove', e => {
   if (!drag) { if (e.pointerType === 'mouse') { const tEl = tableAt(e.clientX, e.clientY); tEl ? showTip(tEl) : (tip.hidden = true); } return; }
+  if (drag.kind === 'pan') { view.px = drag.px + e.clientX - drag.sx; view.py = drag.py + e.clientY - drag.sy; fit(); return; }
   if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
   if (!drag.moved) {
     drag.moved = true;
@@ -421,7 +454,7 @@ addEventListener('pointermove', e => {
     }
   }
   if (drag.kind === 'table') {
-    if (!view.edit) return;
+    if (!view.edit) { view.px = drag.px + e.clientX - drag.sx; view.py = drag.py + e.clientY - drag.sy; fit(); return; }
     const p = toPlan(e.clientX, e.clientY);
     drag.t.x = Math.round(Math.max(30, Math.min(1170, p.x - drag.dx)));
     drag.t.y = Math.round(Math.max(30, Math.min(730, p.y - drag.dy)));
@@ -440,6 +473,7 @@ addEventListener('pointermove', e => {
 addEventListener('pointerup', e => {
   if (!drag) return;
   const d = drag; drag = null;
+  if (d.kind === 'pan') { stage.classList.remove('panning'); return; }
   d.ghost && d.ghost.remove(); list.classList.remove('drop'); tip.hidden = true;
   document.querySelectorAll('.table.hot').forEach(x => x.classList.remove('hot'));
   if (!d.moved) { // clic
@@ -448,7 +482,7 @@ addEventListener('pointerup', e => {
     else if (d.kind === 'pal') toast('Arrastra la mesa hasta el plano');
     return;
   }
-  if (d.kind === 'table') { save(); render(); return; }
+  if (d.kind === 'table') { if (view.edit) { save(); render(); } return; }
   const tEl = tableAt(e.clientX, e.clientY);
   const onList = document.elementFromPoint(e.clientX, e.clientY)?.closest('.panel');
   if (d.kind === 'res') {
@@ -468,7 +502,7 @@ addEventListener('pointerup', e => {
     S.tables.push(t); save(); render(); toast(`Mesa ${t.name} añadida`);
   }
 });
-addEventListener('pointercancel', () => { if (drag) { drag.ghost && drag.ghost.remove(); drag = null; render(); } });
+addEventListener('pointercancel', () => { stage.classList.remove('panning'); if (drag) { drag.ghost && drag.ghost.remove(); drag = null; render(); } });
 
 /* ---------- diálogo reserva ---------- */
 const resDlg = $('#resDlg'), rf = $('#resForm');
@@ -506,13 +540,14 @@ function openTable(t) {
   $('#tblEdit').hidden = !view.edit; $('#delTbl').hidden = !view.edit; $('#saveTbl').hidden = !view.edit;
   tf.elements.name.value = t.name; tf.elements.seats.value = t.seats; tf.elements.shape.value = t.shape;
   $('#tblView').innerHTML = view.edit ? '' : (rs.length
-    ? `<ul class="tl">${rs.map(r => `<li><span class="sw" style="background:${r.color}"></span><span class="n"><b>${esc(r.name)}</b> · ${r.pax} pax<br><small>${esc([r.time, r.phone, r.notes].filter(Boolean).join(' · '))}</small></span><button type="button" class="btn" data-free="${r.id}">Quitar</button></li>`).join('')}</ul>`
-    : '<p style="color:var(--muted);margin:0">Mesa libre en este turno. Arrastra una reserva desde abajo.</p>');
+    ? `<ul class="tl">${rs.map(r => `<li><span class="sw" style="background:${r.color}"></span><span class="n"><b>${esc(r.name)}</b> · ${r.pax} pax<br><small>${esc([r.time, r.phone, r.notes].filter(Boolean).join(' · '))}</small></span><button type="button" class="btn danger" data-free="${r.id}">✕ Quitar de la mesa</button></li>`).join('')}</ul>`
+    : '<p style="color:var(--muted);margin:0">Mesa libre en este turno. Arrastra una reserva desde abajo.</p>') + (rs.length > 1 ? '<div class="acts"><button type="button" class="btn danger" data-free="all">Vaciar mesa</button></div>' : '');
   tblDlg.showModal();
 }
 $('#tblView').addEventListener('click', e => {
   const id = e.target.dataset.free; if (!id) return;
-  S.reservations.find(r => r.id === id).tableId = null; save(); render(); openTable(curT); tblDlg.close(); openTable(curT);
+  if (id === 'all') { byTable(curT.id).forEach(r => r.tableId = null); save(); render(); tblDlg.close(); toast(`Mesa ${curT.name} vacía`); return; }
+  S.reservations.find(r => r.id === id).tableId = null; save(); render(); tblDlg.close(); openTable(curT);
 });
 tf.addEventListener('submit', () => {
   if (!view.edit) return;
@@ -535,7 +570,17 @@ $('#today').onclick = () => { view.date = iso(new Date()); render(); };
 $('#date').onchange = e => { if (e.target.value) { view.date = e.target.value; render(); } };
 $('#turnos').onclick = e => { const t = e.target.dataset.t; if (t) { view.turno = t; render(); } };
 $('#tabs').onclick = e => { const t = e.target.dataset.tab; if (t) { view.tab = t; render(); } };
-$('#editBtn').onclick = () => { view.edit = !view.edit; if (view.edit) view.tab = 'el'; render(); toast(view.edit ? 'Modo edición: mueve las mesas o pulsa una para cambiarla' : 'Plano guardado'); };
+$('#lockBtn').onclick = () => { view.edit = !view.edit; render(); toast(view.edit ? 'Arrastra las mesas para moverlas. Pulsa una para cambiar sillas, forma o borrarla.' : 'Plano fijado y guardado'); };
+const zoomTo = z => { view.zoom = Math.max(.5, Math.min(3, z)); fit(); };
+$('#zIn').onclick = () => zoomTo(view.zoom * 1.25);
+$('#zOut').onclick = () => zoomTo(view.zoom / 1.25);
+$('#zFit').onclick = () => { view.zoom = 1; view.px = view.py = 0; fit(); };
+stage.addEventListener('wheel', e => { e.preventDefault(); zoomTo(view.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); }, { passive: false });
+stage.addEventListener('pointerdown', e => {
+  if (e.button > 0 || e.target.closest('.table, .zoom, .lockbar')) return;
+  drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, px: view.px, py: view.py, moved: true };
+  stage.classList.add('panning');
+});
 $('#q').oninput = e => { view.q = e.target.value; renderList(); };
 $('#onlyFree').onchange = e => { view.onlyFree = e.target.checked; renderList(); };
 
