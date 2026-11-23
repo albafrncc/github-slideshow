@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reservas del Comedor</title>
+<style>
+:root{
+  --bg:#1d1a17; --panel:rgba(255,250,246,.86); --ink:#2b2522; --muted:#7a6f69;
+  --line:rgba(60,40,30,.12); --accent:#8a4b5e; --accent2:#c9b6e4; --chair:#f3efe9;
+  --ok:#3f7d5a; --warn:#b3412f; --cloth:#f4f1ec;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{display:flex;flex-direction:column;height:100%}
+
+/* ---------- barra superior ---------- */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;background:#25201c;color:#f5ede6;border-bottom:1px solid #000}
+.top h1{font-size:16px;margin:0 10px 0 0;font-weight:650;letter-spacing:.2px}
+.top .grp{display:flex;align-items:center;gap:6px}
+.top input,.top select{background:#342d28;border:1px solid #4a403a;border-radius:8px;padding:6px 8px;color:#f5ede6}
+.seg{display:flex;background:#342d28;border-radius:9px;padding:2px;border:1px solid #4a403a}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:7px;color:#d9cdc4}
+.seg button.on{background:#f5ede6;color:#25201c;font-weight:600}
+.stats{margin-left:auto;display:flex;gap:14px;font-size:13px;color:#d9cdc4}
+.stats b{color:#fff;font-size:15px}
+.btn{border:1px solid #4a403a;background:#342d28;color:#f5ede6;border-radius:8px;padding:6px 11px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.on{background:#e9c46a;color:#25201c;border-color:#e9c46a;font-weight:600}
+
+/* ---------- plano ---------- */
+.stage{position:relative;flex:1;min-height:0;overflow:hidden}
+.floor{position:absolute;inset:0;
+  background:
+   repeating-linear-gradient(90deg,rgba(0,0,0,.10) 0 2px,transparent 2px 120px),
+   repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 22px),
+   linear-gradient(90deg,#8a5a36,#9b6a42 30%,#8f5f3a 60%,#a06f47);
+}
+.plan{position:absolute;left:0;top:0;width:1200px;height:760px;transform-origin:0 0}
+.deco{position:absolute;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600;letter-spacing:2px;text-transform:uppercase;font-size:13px;color:rgba(60,45,35,.55)}
+.deco.cocina{background:rgba(240,236,230,.92);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.deco.barra{background:linear-gradient(#3a2a20,#2a1d16);color:#cdb8a6;border-radius:30px}
+.deco.entrada{border:2px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.7)}
+
+.table{position:absolute;touch-action:none}
+.table .top3d{position:absolute;inset:0;background:radial-gradient(circle at 40% 35%,#fff,var(--cloth) 60%,#ddd6cc);box-shadow:0 10px 22px rgba(0,0,0,.35),inset 0 0 0 6px rgba(255,255,255,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2}
+.table.round .top3d{border-radius:50%}
+.table.rect .top3d{border-radius:10px}
+.table .num{width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid #d8d0c6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.table.rect .num{width:auto;min-width:34px;padding:0 8px;border-radius:17px}
+.table .occ{font-size:11px;color:var(--muted);margin-top:2px;font-weight:600}
+.chair{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:6px;background:var(--chair);box-shadow:0 3px 6px rgba(0,0,0,.35);z-index:1;transition:background .25s,transform .25s}
+.chair.taken{box-shadow:0 3px 6px rgba(0,0,0,.35),inset 0 0 0 3px rgba(255,255,255,.55)}
+.chair.over{background:var(--warn)!important;outline:2px solid #fff}
+.table.hot .top3d{box-shadow:0 0 0 5px #e9c46a,0 10px 22px rgba(0,0,0,.35)}
+.table.full.hot .top3d{box-shadow:0 0 0 5px var(--warn),0 10px 22px rgba(0,0,0,.35)}
+.editing .table{cursor:grab}
+.editing .table .top3d{outline:2px dashed rgba(255,255,255,.8);outline-offset:4px}
+.tip{position:absolute;z-index:50;pointer-events:none;background:rgba(255,255,255,.95);border-radius:9px;padding:4px 10px;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.3);white-space:nowrap;transform:translate(-50%,-130%)}
+
+/* ---------- panel inferior ---------- */
+.panel{position:relative;z-index:5;margin:0 12px 12px;background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:16px;box-shadow:0 -6px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:42%}
+.panel .bar{display:flex;align-items:center;gap:8px;padding:10px 12px 6px;flex-wrap:wrap}
+.tabs{display:flex;background:rgba(0,0,0,.06);border-radius:10px;padding:3px}
+.tabs button{border:0;background:none;padding:5px 12px;border-radius:8px;font-weight:600;color:var(--muted)}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.tabs button:nth-child(2).on{background:var(--accent2)}
+.search{flex:1;min-width:150px;max-width:340px;display:flex;align-items:center;gap:6px;background:#fff;border-radius:10px;padding:5px 10px;border:1px solid var(--line)}
+.search input{border:0;outline:0;flex:1;background:none;min-width:0}
+.panel label.chk{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13px}
+.panel .bar .btn{background:#fff;color:var(--ink);border-color:var(--line)}
+.panel .bar .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.list{display:flex;gap:10px;overflow-x:auto;padding:6px 12px 14px;min-height:118px}
+.list.drop{outline:3px dashed var(--accent);outline-offset:-6px;border-radius:14px}
+.empty{color:var(--muted);padding:20px;font-size:13px}
+
+.card{flex:0 0 auto;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:14px;padding:8px 10px 10px;min-width:170px;max-width:300px;touch-action:none;user-select:none;cursor:grab;position:relative}
+.card:hover{background:#fff}
+.card .h{display:flex;align-items:center;gap:6px;font-weight:650;font-size:13px;white-space:nowrap}
+.card .h .sw{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.card .h .t{margin-left:auto;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.card .sub{font-size:12px;color:var(--muted);margin:2px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .pp{display:flex;gap:4px;flex-wrap:wrap}
+.card .p{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 2px 4px rgba(0,0,0,.18)}
+.card.seated{opacity:.62}
+.card .tag{position:absolute;top:-8px;right:8px;background:var(--ink);color:#fff;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:600}
+.card .tag.bad{background:var(--warn)}
+.ghost{position:fixed;z-index:100;pointer-events:none;opacity:.92;transform:translate(-50%,-50%) rotate(-3deg);box-shadow:0 12px 28px rgba(0,0,0,.4)}
+
+.pal{flex:0 0 auto;width:104px;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:14px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;touch-action:none;cursor:grab;user-select:none;font-size:12px;font-weight:600}
+.pal svg{display:block}
+.hint{font-size:12px;color:var(--muted);align-self:center;max-width:260px;padding:0 6px}
+
+/* ---------- diálogos ---------- */
+dialog{border:0;border-radius:16px;padding:0;width:min(420px,calc(100vw - 32px));box-shadow:0 20px 60px rgba(0,0,0,.5);background:#fffaf6;color:var(--ink)}
+dialog::backdrop{background:rgba(20,15,12,.55)}
+dialog form{padding:18px}
+dialog h2{margin:0 0 12px;font-size:17px}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:600}
+.f label.w{grid-column:1/-1}
+.f input,.f select,.f textarea{border:1px solid #d9cfc7;border-radius:9px;padding:8px;background:#fff;font-size:14px;color:var(--ink)}
+.acts{display:flex;gap:8px;margin-top:16px}
+.acts .sp{flex:1}
+dialog .btn{background:#fff;color:var(--ink);border:1px solid #d9cfc7}
+dialog .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+dialog .btn.danger{color:var(--warn);border-color:#e7c3bb}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.tl li{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 9px}
+.tl li .sw{width:10px;height:10px;border-radius:50%}
+.tl li span.n{flex:1}
+.tl li small{color:var(--muted)}
+.toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:10px;z-index:200;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+
+@media (max-width:700px){
+  .top{padding:8px 12px}
+  .top h1{width:100%}
+  .stats{margin-left:0;width:100%}
+  .panel{margin:0 8px 8px;max-height:50%}
+}
+@media print{
+  .panel,.top .grp,.top .btn{display:none}
+  body,html{overflow:visible;background:#fff}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>🍽️ Reservas del Comedor</h1>
+    <div class="grp">
+      <button class="btn" id="prevDay" title="Día anterior">‹</button>
+      <input type="date" id="date">
+      <button class="btn" id="nextDay" title="Día siguiente">›</button>
+      <button class="btn" id="today">Hoy</button>
+    </div>
+    <div class="seg" id="turnos">
+      <button data-t="comida">Comida</button>
+      <button data-t="cena">Cena</button>
+    </div>
+    <div class="grp">
+      <button class="btn" id="editBtn">✏️ Editar plano</button>
+      <button class="btn" id="menuBtn" title="Exportar / importar">⋯</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="floor"></div>
+    <div class="plan" id="plan"></div>
+  </div>
+
+  <section class="panel">
+    <div class="bar">
+      <div class="tabs" id="tabs">
+        <button data-tab="res" class="on">Reservas</button>
+        <button data-tab="el">Elementos</button>
+      </div>
+      <div class="search"><span>🔍</span><input id="q" placeholder="Buscar reserva…" autocomplete="off"></div>
+      <label class="chk"><input type="checkbox" id="onlyFree"> Solo sin mesa</label>
+      <button class="btn primary" id="newRes">+ Nueva reserva</button>
+    </div>
+    <div class="list" id="list"></div>
+  </section>
+</div>
+
+<!-- diálogo reserva -->
+<dialog id="resDlg">
+  <form method="dialog" id="resForm">
+    <h2 id="resTitle">Nueva reserva</h2>
+    <div class="f">
+      <label class="w">Nombre / grupo<input name="name" required placeholder="Familia Ruiz"></label>
+      <label>Comensales<input name="pax" type="number" min="1" max="60" value="2" required></label>
+      <label>Hora<input name="time" type="time" value="14:00"></label>
+      <label>Fecha<input name="date" type="date" required></label>
+      <label>Turno<select name="turno"><option value="comida">Comida</option><option value="cena">Cena</option></select></label>
+      <label class="w">Teléfono<input name="phone" type="tel" placeholder="600 000 000"></label>
+      <label class="w">Nombres de los comensales (opcional, separados por comas)<input name="people" placeholder="Carolina, Franco, Inés…"></label>
+      <label class="w">Notas<textarea name="notes" rows="2" placeholder="Alergias, trona, cumpleaños…"></textarea></label>
+      <label class="w">Mesa<select name="table"></select></label>
+    </div>
+    <div class="acts">
+      <button type="button" class="btn danger" id="delRes">Eliminar</button>
+      <span class="sp"></span>
+      <button type="button" class="btn" value="cancel" id="cancelRes">Cancelar</button>
+      <button class="btn primary" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- diálogo mesa -->
+<dialog id="tblDlg">
+  <form method="dialog" id="tblForm">
+    <h2 id="tblTitle">Mesa</h2>
+    <div id="tblView"></div>
+    <div class="f" id="tblEdit">
+      <label>Nombre / número<input name="name" required></label>
+      <label>Sillas<input name="seats" type="number" min="1" max="24" required></label>
+      <label class="w">Forma<select name="shape"><option value="round">Redonda</option><option value="rect">Rectangular</option></select></label>
+    </div>
+    <div class="acts">
+      <button type="button" class="btn danger" id="delTbl">Eliminar mesa</button>
+      <span class="sp"></span>
+      <button type="button" class="btn" id="closeTbl">Cerrar</button>
+      <button class="btn primary" id="saveTbl" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- diálogo exportar -->
+<dialog id="ioDlg">
+  <form method="dialog">
+    <h2>Datos</h2>
+    <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Los datos se guardan en este navegador. Exporta una copia de seguridad o pásala a otro ordenador.</p>
+    <div class="acts" style="flex-wrap:wrap">
+      <button type="button" class="btn" id="exportBtn">⬇️ Exportar copia (.json)</button>
+      <button type="button" class="btn" id="importBtn">⬆️ Importar copia</button>
+      <button type="button" class="btn" id="csvBtn">📄 Lista del turno (.csv)</button>
+      <button type="button" class="btn" id="printBtn">🖨️ Imprimir plano</button>
+      <button type="button" class="btn danger" id="resetBtn">Restaurar ejemplo</button>
+      <span class="sp"></span>
+      <button class="btn primary">Cerrar</button>
+    </div>
+    <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+const KEY = 'comedor-reservas-v1';
+const COLORS = ['#b5465f','#3f6fb5','#3f8f6a','#c9822b','#7a52a8','#2c8c99','#a85d3b','#5d7a2c','#c25b9e','#4a5a78','#9a7b2f','#d0603f'];
+const $ = s => document.querySelector(s);
+const plan = $('#plan'), stage = $('#stage'), list = $('#list');
+const uid = () => Math.random().toString(36).slice(2, 10);
+const iso = d => { const z = new Date(d.getTime() - d.getTimezoneOffset()*6e4); return z.toISOString().slice(0,10); };
+
+/* ---------- estado ---------- */
+let S, view = { date: iso(new Date()), turno: new Date().getHours() >= 17 ? 'cena' : 'comida', tab: 'res', edit: false, q: '', onlyFree: false };
+
+function demo() {
+  const t = [];
+  const row = (y, nums, seats) => nums.forEach((n, i) => t.push({ id: uid(), name: String(n), shape: 'round', seats, x: 150 + i * 220, y }));
+  row(400, [6, 2, 1, 3, 4], 10);
+  row(600, [7, 8, 9], 8);
+  t.filter(x => ['7','8','9'].includes(x.name)).forEach((x, i) => x.x = 260 + i * 260);
+  t.push({ id: uid(), name: '10', shape: 'rect', seats: 6, x: 1040, y: 640 });
+  t.push({ id: uid(), name: '11', shape: 'rect', seats: 4, x: 80, y: 640 });
+  const names = [['Familia Ruiz',4,'13:30','Carolina, Franco, Mateo, Inés'],['Familia Maldonado',4,'14:00','Ignacio, Joaquín, Silvia, Tomás'],
+    ['Familia Luna',5,'14:00','Alberto, Diego, Eduardo, Martín, Victoria'],['Familia Godoy',4,'14:15','Andrés, Camila, Gustavo, Joaquín'],
+    ['Familia Peralta',4,'14:30','Andrés, Gonzalo, Roberto, Victoria'],['Cumple Hernán',9,'14:30',''],['Mesa empresa Acme',8,'13:45',''],
+    ['Pareja García',2,'15:00','']];
+  const r = [];
+  const today = iso(new Date());
+  names.forEach(([name, pax, time, people], i) => r.push({ id: uid(), date: today, turno: 'comida', name, pax, time, phone: '', notes: i === 5 ? 'Traen tarta' : '', people, color: COLORS[i % COLORS.length], tableId: null }));
+  [['Cena Sánchez',6,'21:00'],['Amigas del club',8,'21:30'],['Pareja López',2,'21:15']].forEach(([name, pax, time], i) =>
+    r.push({ id: uid(), date: today, turno: 'cena', name, pax, time, phone: '', notes: '', people: '', color: COLORS[(i + 3) % COLORS.length], tableId: null }));
+  // sienta algunas de ejemplo
+  r[0].tableId = t.find(x => x.name === '1').id;
+  r[1].tableId = t.find(x => x.name === '2').id;
+  return { tables: t, reservations: r };
+}
+function load() { try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) {} if (!S || !S.tables) S = demo(); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+load();
+
+const current = () => S.reservations.filter(r => r.date === view.date && r.turno === view.turno);
+const byTable = id => current().filter(r => r.tableId === id).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+const seatedPax = id => byTable(id).reduce((s, r) => s + (+r.pax || 0), 0);
+const initials = n => n.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200); }
+
+/* ---------- escala del plano ---------- */
+let scale = 1;
+function fit() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  scale = Math.min(w / 1200, h / 760);
+  const ox = (w - 1200 * scale) / 2, oy = Math.max(0, (h - 760 * scale) / 2);
+  plan.style.transform = `translate(${ox}px,${oy}px) scale(${scale})`;
+  plan.dataset.ox = ox; plan.dataset.oy = oy;
+}
+const toPlan = (cx, cy) => { const r = stage.getBoundingClientRect(); return { x: (cx - r.left - +plan.dataset.ox) / scale, y: (cy - r.top - +plan.dataset.oy) / scale }; };
+addEventListener('resize', fit);
+
+/* ---------- geometría de mesas ---------- */
+function geom(t) {
+  if (t.shape === 'round') {
+    const d = Math.max(70, 40 + t.seats * 9), R = d / 2 + 16, chairs = [];
+    for (let i = 0; i < t.seats; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / t.seats; chairs.push([d / 2 + R * Math.cos(a), d / 2 + R * Math.sin(a), a * 180 / Math.PI + 90]); }
+    return { w: d, h: d, chairs };
+  }
+  const per = Math.ceil(t.seats / 2), w = Math.max(64, per * 40 + 16), h = 64, chairs = [];
+  const bottom = t.seats - per;
+  for (let i = 0; i < per; i++) chairs.push([(i + .5) * w / per, -14, 0]);
+  for (let i = 0; i < bottom; i++) chairs.push([w - (i + .5) * w / bottom, h + 14, 180]);
+  return { w, h, chairs };
+}
+
+/* ---------- render ---------- */
+function renderPlan() {
+  plan.innerHTML = `
+    <div class="deco cocina" style="left:420px;top:40px;width:360px;height:150px">Cocina</div>
+    <div class="deco barra" style="left:860px;top:90px;width:260px;height:56px">Barra</div>
+    <div class="deco entrada" style="left:40px;top:60px;width:180px;height:100px">Entrada</div>`;
+  plan.classList.toggle('editing', view.edit);
+  for (const t of S.tables) {
+    const g = geom(t), rs = byTable(t.id), seated = seatedPax(t.id);
+    const el = document.createElement('div');
+    el.className = `table ${t.shape}` + (seated >= t.seats ? ' full' : '');
+    el.dataset.id = t.id;
+    el.style.cssText = `left:${t.x - g.w / 2}px;top:${t.y - g.h / 2}px;width:${g.w}px;height:${g.h}px`;
+    // colores de sillas
+    const fill = []; rs.forEach(r => { for (let i = 0; i < r.pax; i++) fill.push(r.color); });
+    let html = '';
+    g.chairs.forEach(([x, y, rot], i) => {
+      const c = fill[i];
+      html += `<div class="chair${c ? ' taken' : ''}" style="left:${x}px;top:${y}px;transform:rotate(${rot}deg);${c ? 'background:' + c : ''}"></div>`;
+    });
+    const over = seated - t.seats;
+    html += `<div class="top3d"><div class="num">${esc(t.name)}</div><div class="occ" style="${over > 0 ? 'color:var(--warn)' : ''}">${seated}/${t.seats}${over > 0 ? ' ⚠' : ''}</div></div>`;
+    el.innerHTML = html;
+    plan.appendChild(el);
+  }
+}
+
+function renderList() {
+  list.innerHTML = '';
+  if (view.tab === 'el') return renderPalette();
+  const q = view.q.trim().toLowerCase();
+  let rs = current().filter(r => !q || (r.name + ' ' + (r.people || '') + ' ' + (r.phone || '')).toLowerCase().includes(q));
+  if (view.onlyFree) rs = rs.filter(r => !r.tableId);
+  rs.sort((a, b) => (!!a.tableId - !!b.tableId) || (a.time || '').localeCompare(b.time || ''));
+  if (!rs.length) { list.innerHTML = `<div class="empty">${current().length ? 'Ninguna reserva coincide.' : 'No hay reservas para este turno. Pulsa «+ Nueva reserva».'}</div>`; return; }
+  for (const r of rs) {
+    const t = S.tables.find(x => x.id === r.tableId);
+    const people = (r.people || '').split(',').map(s => s.trim()).filter(Boolean);
+    let pp = '';
+    for (let i = 0; i < r.pax; i++) {
+      const n = people[i];
+      pp += `<div class="p" style="background:${r.color}" title="${esc(n || '')}">${n ? esc(initials(n)) : ''}</div>`;
+    }
+    const over = t && seatedPax(t.id) > t.seats;
+    const el = document.createElement('div');
+    el.className = 'card' + (t ? ' seated' : '');
+    el.dataset.id = r.id;
+    el.innerHTML = `${t ? `<span class="tag${over ? ' bad' : ''}">Mesa ${esc(t.name)}</span>` : ''}
+      <div class="h"><span class="sw" style="background:${r.color}"></span>${esc(r.name)} · ${r.pax}<span class="t">${esc(r.time || '')}</span></div>
+      <div class="sub">${esc([r.phone, r.notes].filter(Boolean).join(' · ') || ' ')}</div>
+      <div class="pp">${pp}</div>`;
+    list.appendChild(el);
+  }
+}
+
+function renderPalette() {
+  const items = [['round', 4], ['round', 6], ['round', 8], ['round', 10], ['round', 12], ['rect', 2], ['rect', 4], ['rect', 6], ['rect', 8]];
+  for (const [shape, seats] of items) {
+    const el = document.createElement('div');
+    el.className = 'pal'; el.dataset.shape = shape; el.dataset.seats = seats;
+    const g = geom({ shape, seats }), pad = 18, W = g.w + pad * 2, H = g.h + pad * 2, k = 60 / Math.max(W, H);
+    const chairs = g.chairs.map(([x, y]) => `<rect x="${x + pad - 7}" y="${y + pad - 7}" width="14" height="14" rx="4" fill="#e9e2d9" stroke="#bfb3a6"/>`).join('');
+    const top = shape === 'round' ? `<circle cx="${g.w / 2 + pad}" cy="${g.h / 2 + pad}" r="${g.w / 2}" fill="#fff" stroke="#bfb3a6" stroke-width="2"/>` : `<rect x="${pad}" y="${pad}" width="${g.w}" height="${g.h}" rx="8" fill="#fff" stroke="#bfb3a6" stroke-width="2"/>`;
+    el.innerHTML = `<svg width="${W * k}" height="${H * k}" viewBox="0 0 ${W} ${H}">${chairs}${top}</svg>${shape === 'round' ? 'Redonda' : 'Rectangular'} · ${seats}`;
+    list.appendChild(el);
+  }
+  list.insertAdjacentHTML('beforeend', `<div class="hint">Arrastra una mesa al plano. Con <b>Editar plano</b> activado puedes mover las mesas y, al pulsar una, cambiarle el nombre, las sillas o eliminarla.</div>`);
+}
+
+function renderStats() {
+  const rs = current(), total = rs.reduce((s, r) => s + (+r.pax || 0), 0), seated = rs.filter(r => r.tableId).reduce((s, r) => s + (+r.pax || 0), 0);
+  const cap = S.tables.reduce((s, t) => s + t.seats, 0), free = S.tables.filter(t => !byTable(t.id).length).length;
+  $('#stats').innerHTML = `<span><b>${rs.length}</b> reservas</span><span><b>${seated}/${total}</b> sentados</span><span><b>${free}</b> mesas libres</span><span><b>${total}/${cap}</b> aforo</span>`;
+}
+
+function render() {
+  $('#date').value = view.date;
+  document.querySelectorAll('#turnos button').forEach(b => b.classList.toggle('on', b.dataset.t === view.turno));
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === view.tab));
+  $('#editBtn').classList.toggle('on', view.edit);
+  $('#q').parentElement.style.display = $('#onlyFree').parentElement.style.display = view.tab === 'res' ? '' : 'none';
+  renderPlan(); renderList(); renderStats();
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- arrastrar (ratón y táctil) ---------- */
+let drag = null;
+const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; stage.appendChild(tip);
+
+function tableAt(x, y) { const el = document.elementFromPoint(x, y); return el && el.closest && el.closest('.table'); }
+function showTip(tEl, extra = 0) {
+  if (!tEl) { tip.hidden = true; return; }
+  const t = S.tables.find(x => x.id === tEl.dataset.id), r = tEl.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+  const n = seatedPax(t.id) + extra;
+  tip.hidden = false; tip.textContent = `Mesa ${t.name} · ${n}/${t.seats}`; tip.style.color = n > t.seats ? 'var(--warn)' : '';
+  tip.style.left = (r.left + r.width / 2 - sr.left) + 'px'; tip.style.top = (r.top - sr.top) + 'px';
+}
+
+list.addEventListener('pointerdown', e => {
+  const card = e.target.closest('.card, .pal'); if (!card || e.button > 0) return;
+  drag = { kind: card.classList.contains('pal') ? 'pal' : 'res', src: card, sx: e.clientX, sy: e.clientY, moved: false };
+  card.setPointerCapture(e.pointerId);
+});
+plan.addEventListener('pointerdown', e => {
+  const tEl = e.target.closest('.table'); if (!tEl || e.button > 0) return;
+  const t = S.tables.find(x => x.id === tEl.dataset.id), p = toPlan(e.clientX, e.clientY);
+  drag = { kind: 'table', src: tEl, t, dx: p.x - t.x, dy: p.y - t.y, sx: e.clientX, sy: e.clientY, moved: false };
+  tEl.setPointerCapture(e.pointerId);
+});
+addEventListener('pointermove', e => {
+  if (!drag) { if (e.pointerType === 'mouse') { const tEl = tableAt(e.clientX, e.clientY); tEl ? showTip(tEl) : (tip.hidden = true); } return; }
+  if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+  if (!drag.moved) {
+    drag.moved = true;
+    if (drag.kind !== 'table') {
+      drag.ghost = drag.src.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.style.width = drag.src.offsetWidth + 'px';
+      document.body.appendChild(drag.ghost);
+    }
+  }
+  if (drag.kind === 'table') {
+    if (!view.edit) return;
+    const p = toPlan(e.clientX, e.clientY);
+    drag.t.x = Math.round(Math.max(30, Math.min(1170, p.x - drag.dx)));
+    drag.t.y = Math.round(Math.max(30, Math.min(730, p.y - drag.dy)));
+    const g = geom(drag.t); drag.src.style.left = drag.t.x - g.w / 2 + 'px'; drag.src.style.top = drag.t.y - g.h / 2 + 'px';
+    return;
+  }
+  drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
+  drag.ghost.hidden = true; const tEl = tableAt(e.clientX, e.clientY); const overList = document.elementFromPoint(e.clientX, e.clientY)?.closest('.list'); drag.ghost.hidden = false;
+  document.querySelectorAll('.table.hot').forEach(x => x !== tEl && x.classList.remove('hot'));
+  if (drag.kind === 'res') {
+    const r = S.reservations.find(x => x.id === drag.src.dataset.id);
+    if (tEl) { tEl.classList.add('hot'); showTip(tEl, r.tableId === tEl.dataset.id ? 0 : +r.pax); } else tip.hidden = true;
+    list.classList.toggle('drop', !!overList && !!r.tableId);
+  }
+});
+addEventListener('pointerup', e => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  d.ghost && d.ghost.remove(); list.classList.remove('drop'); tip.hidden = true;
+  document.querySelectorAll('.table.hot').forEach(x => x.classList.remove('hot'));
+  if (!d.moved) { // clic
+    if (d.kind === 'res') openRes(S.reservations.find(x => x.id === d.src.dataset.id));
+    else if (d.kind === 'table') openTable(d.t);
+    else if (d.kind === 'pal') toast('Arrastra la mesa hasta el plano');
+    return;
+  }
+  if (d.kind === 'table') { save(); render(); return; }
+  const tEl = tableAt(e.clientX, e.clientY);
+  const onList = document.elementFromPoint(e.clientX, e.clientY)?.closest('.panel');
+  if (d.kind === 'res') {
+    const r = S.reservations.find(x => x.id === d.src.dataset.id);
+    if (tEl) {
+      const t = S.tables.find(x => x.id === tEl.dataset.id);
+      r.tableId = t.id; save(); render();
+      const n = seatedPax(t.id);
+      toast(n > t.seats ? `⚠ Mesa ${t.name} se pasa de aforo (${n}/${t.seats})` : `${r.name} → Mesa ${t.name} (${n}/${t.seats})`);
+    } else if (onList && r.tableId) { r.tableId = null; save(); render(); toast(`${r.name} sin mesa`); }
+  } else if (d.kind === 'pal') {
+    const sr = stage.getBoundingClientRect();
+    if (e.clientY > sr.bottom || e.clientY < sr.top || onList) return;
+    const p = toPlan(e.clientX, e.clientY);
+    const nums = S.tables.map(t => +t.name).filter(n => !isNaN(n));
+    const t = { id: uid(), name: String((nums.length ? Math.max(...nums) : 0) + 1), shape: d.src.dataset.shape, seats: +d.src.dataset.seats, x: Math.round(Math.max(30, Math.min(1170, p.x))), y: Math.round(Math.max(30, Math.min(730, p.y))) };
+    S.tables.push(t); save(); render(); toast(`Mesa ${t.name} añadida`);
+  }
+});
+addEventListener('pointercancel', () => { if (drag) { drag.ghost && drag.ghost.remove(); drag = null; render(); } });
+
+/* ---------- diálogo reserva ---------- */
+const resDlg = $('#resDlg'), rf = $('#resForm');
+let editing = null;
+function openRes(r) {
+  editing = r || null;
+  $('#resTitle').textContent = r ? 'Editar reserva' : 'Nueva reserva';
+  $('#delRes').style.visibility = r ? 'visible' : 'hidden';
+  const v = r || { name: '', pax: 2, time: view.turno === 'cena' ? '21:00' : '14:00', date: view.date, turno: view.turno, phone: '', people: '', notes: '', tableId: '' };
+  for (const k of ['name', 'pax', 'time', 'date', 'turno', 'phone', 'people', 'notes']) rf.elements[k].value = v[k] ?? '';
+  rf.elements.table.innerHTML = '<option value="">— Sin mesa —</option>' + S.tables.slice().sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true }))
+    .map(t => `<option value="${t.id}">Mesa ${esc(t.name)} (${seatedPax(t.id)}/${t.seats})</option>`).join('');
+  rf.elements.table.value = v.tableId || '';
+  resDlg.showModal();
+}
+rf.addEventListener('submit', e => {
+  const f = rf.elements;
+  const data = { name: f.name.value.trim(), pax: Math.max(1, +f.pax.value || 1), time: f.time.value, date: f.date.value, turno: f.turno.value, phone: f.phone.value.trim(), people: f.people.value.trim(), notes: f.notes.value.trim(), tableId: f.table.value || null };
+  if (editing) Object.assign(editing, data);
+  else { const used = new Set(current().map(r => r.color)); data.color = COLORS.find(c => !used.has(c)) || COLORS[S.reservations.length % COLORS.length]; data.id = uid(); S.reservations.push(data); }
+  if (data.date !== view.date || data.turno !== view.turno) toast(`Guardada para el ${data.date.split('-').reverse().join('/')} (${data.turno})`);
+  save(); render();
+});
+$('#cancelRes').onclick = () => resDlg.close();
+$('#delRes').onclick = () => { if (editing && confirm(`¿Eliminar la reserva «${editing.name}»?`)) { S.reservations = S.reservations.filter(r => r !== editing); save(); render(); resDlg.close(); } };
+$('#newRes').onclick = () => openRes();
+
+/* ---------- diálogo mesa ---------- */
+const tblDlg = $('#tblDlg'), tf = $('#tblForm');
+let curT = null;
+function openTable(t) {
+  curT = t;
+  const rs = byTable(t.id), n = seatedPax(t.id);
+  $('#tblTitle').textContent = `Mesa ${t.name} · ${n}/${t.seats}`;
+  $('#tblEdit').hidden = !view.edit; $('#delTbl').hidden = !view.edit; $('#saveTbl').hidden = !view.edit;
+  tf.elements.name.value = t.name; tf.elements.seats.value = t.seats; tf.elements.shape.value = t.shape;
+  $('#tblView').innerHTML = view.edit ? '' : (rs.length
+    ? `<ul class="tl">${rs.map(r => `<li><span class="sw" style="background:${r.color}"></span><span class="n"><b>${esc(r.name)}</b> · ${r.pax} pax<br><small>${esc([r.time, r.phone, r.notes].filter(Boolean).join(' · '))}</small></span><button type="button" class="btn" data-free="${r.id}">Quitar</button></li>`).join('')}</ul>`
+    : '<p style="color:var(--muted);margin:0">Mesa libre en este turno. Arrastra una reserva desde abajo.</p>');
+  tblDlg.showModal();
+}
+$('#tblView').addEventListener('click', e => {
+  const id = e.target.dataset.free; if (!id) return;
+  S.reservations.find(r => r.id === id).tableId = null; save(); render(); openTable(curT); tblDlg.close(); openTable(curT);
+});
+tf.addEventListener('submit', () => {
+  if (!view.edit) return;
+  curT.name = tf.elements.name.value.trim() || curT.name; curT.seats = Math.max(1, Math.min(24, +tf.elements.seats.value || curT.seats)); curT.shape = tf.elements.shape.value;
+  save(); render();
+});
+$('#closeTbl').onclick = () => tblDlg.close();
+$('#delTbl').onclick = () => {
+  const n = S.reservations.filter(r => r.tableId === curT.id).length;
+  if (!confirm(`¿Eliminar la mesa ${curT.name}?` + (n ? ` Tiene ${n} reserva(s) asignada(s), que quedarán sin mesa.` : ''))) return;
+  S.reservations.forEach(r => { if (r.tableId === curT.id) r.tableId = null; });
+  S.tables = S.tables.filter(t => t !== curT); save(); render(); tblDlg.close();
+};
+
+/* ---------- controles ---------- */
+const shift = n => { const d = new Date(view.date + 'T12:00'); d.setDate(d.getDate() + n); view.date = iso(d); render(); };
+$('#prevDay').onclick = () => shift(-1);
+$('#nextDay').onclick = () => shift(1);
+$('#today').onclick = () => { view.date = iso(new Date()); render(); };
+$('#date').onchange = e => { if (e.target.value) { view.date = e.target.value; render(); } };
+$('#turnos').onclick = e => { const t = e.target.dataset.t; if (t) { view.turno = t; render(); } };
+$('#tabs').onclick = e => { const t = e.target.dataset.tab; if (t) { view.tab = t; render(); } };
+$('#editBtn').onclick = () => { view.edit = !view.edit; if (view.edit) view.tab = 'el'; render(); toast(view.edit ? 'Modo edición: mueve las mesas o pulsa una para cambiarla' : 'Plano guardado'); };
+$('#q').oninput = e => { view.q = e.target.value; renderList(); };
+$('#onlyFree').onchange = e => { view.onlyFree = e.target.checked; renderList(); };
+
+/* ---------- exportar / importar ---------- */
+const download = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
+$('#menuBtn').onclick = () => $('#ioDlg').showModal();
+$('#exportBtn').onclick = () => download(`comedor-${iso(new Date())}.json`, JSON.stringify(S, null, 2), 'application/json');
+$('#importBtn').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.tables) || !Array.isArray(d.reservations)) throw 0; S = d; save(); render(); toast('Copia importada'); $('#ioDlg').close(); }
+  catch (err) { alert('El archivo no es una copia válida.'); }
+  e.target.value = '';
+};
+$('#csvBtn').onclick = () => {
+  const rows = [['Hora', 'Reserva', 'Comensales', 'Mesa', 'Teléfono', 'Notas', 'Nombres']];
+  current().sort((a, b) => (a.time || '').localeCompare(b.time || '')).forEach(r => rows.push([r.time, r.name, r.pax, S.tables.find(t => t.id === r.tableId)?.name || '', r.phone, r.notes, r.people]));
+  download(`reservas-${view.date}-${view.turno}.csv`, '﻿' + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n'), 'text/csv');
+};
+$('#printBtn').onclick = () => { $('#ioDlg').close(); setTimeout(print, 100); };
+$('#resetBtn').onclick = () => { if (confirm('Se borrarán todas las mesas y reservas y se cargará el ejemplo. ¿Seguir?')) { S = demo(); save(); render(); $('#ioDlg').close(); } };
+
+fit(); render();
+new ResizeObserver(fit).observe(stage);
+})();
+</script>
+</body>
+</html>
